@@ -21,12 +21,15 @@ const provider = new GoogleAuthProvider();
 const starsDisplay = document.getElementById('stars-count');
 
 // Функция входа
-window.login = async () => {
+import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+window.login = async function() {
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInAnonymously(auth);
+    console.log("Вошел анонимно! ID:", result.user.uid);
+    alert("Вы вошли как гость! Ваш прогресс сохранится в этом браузере.");
   } catch (error) {
     console.error("Ошибка входа:", error);
-    alert("Ошибка при входе: " + error.message);
   }
 };
 
