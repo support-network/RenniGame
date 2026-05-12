@@ -12,31 +12,40 @@ const firebaseConfig = {
   appId: "1:849888890806:web:9956c6eb4252197d47b17"
 };
 
+// Инициализация
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Ссылки на элементы UI
 const starsDisplay = document.getElementById('stars-count');
 
-// --- Функция начисления звёзд ---
+// Функция входа
+window.login = async () => {
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("Ошибка входа:", error);
+    alert("Ошибка при входе: " + error.message);
+  }
+};
+
+// Начисление звёзд
 async function completeTask(uid, reward) {
   const userRef = ref(db, 'users/' + uid);
-  const snapshot = await get(userRef); [cite: 58]
+  const snapshot = await get(userRef);
   const currentStars = snapshot.exists() ? (snapshot.val().stars || 0) : 0;
 
   await update(userRef, {
-    stars: currentStars + reward [cite: 59]
+    stars: currentStars + reward
   });
   
-  if(starsDisplay) starsDisplay.innerText = currentStars + reward; [cite: 59]
+  if (starsDisplay) starsDisplay.innerText = currentStars + reward;
   alert("Задание выполнено! + " + reward + " ⭐");
 }
 
-// Делаем функцию доступной для кнопок в HTML (window.processTask)
 window.processTask = (reward) => {
-  const user = auth.currentUser; [cite: 57]
+  const user = auth.currentUser;
   if (user) {
     completeTask(user.uid, reward);
   } else {
@@ -44,12 +53,16 @@ window.processTask = (reward) => {
   }
 };
 
-// Логика входа
-window.login = () => signInWithPopup(auth, provider);
-
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    console.log("Вошел как:", user.displayName);
-    // Тут можно скрыть кнопку входа и показать баланс
+    console.log("Пользователь вошел:", user.displayName);
+    const userRef = ref(db, 'users/' + user.uid);
+    get(userRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        if (starsDisplay) starsDisplay.innerText = snapshot.val().stars || 0;
+      } else {
+        set(userRef, { stars: 0 });
+      }
+    });
   }
 });
