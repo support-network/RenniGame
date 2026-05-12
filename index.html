@@ -1,23 +1,75 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>RenniGame - Кейсы за задания</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="auth-section">
-        <button id="login-btn">Войти через Google</button>
-    </div>
-<button onclick="window.login()">Войти через Google</button>
-<button onclick="window.processTask(10)">Получить 10 звёзд</button>
-<h2>Баланс: <span id="stars-count">0</span> ⭐</h2>
-    <div id="game-section" style="display:none;">
-        <h2>Баланс: <span id="stars-count">0</span> ⭐</h2>
-        <div id="tasks-list">
-            </div>
-    </div>
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, get, update, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    <script type="module" src="app.js"></script>
-</body>
-</html>
+const firebaseConfig = {
+  apiKey: "AIzaSyCUEFs2B_3ylxAG70t04ClOVfByurXmUK8",
+  authDomain: "rennigame.firebaseapp.com",
+  databaseURL: "https://rennigame-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "rennigame",
+  storageBucket: "rennigame.firebasestorage.app",
+  messagingSenderId: "849888890806",
+  appId: "1:849888890806:web:9956c6eb4252197d47b17"
+};
+
+// Инициализация
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+console.log("Firebase инициализирован");
+
+// Функция входа
+window.login = async function() {
+  console.log("Попытка входа...");
+  try {
+    const result = await signInWithPopup(auth, provider);
+    console.log("Вход выполнен успешно:", result.user.displayName);
+  } catch (error) {
+    console.error("Детальная ошибка входа:", error);
+    alert("Ошибка: " + error.message);
+  }
+};
+
+// Начисление звёзд
+window.processTask = async function(reward) {
+  const user = auth.currentUser;
+  if (!user) {
+    alert("Сначала войди в аккаунт!");
+    return;
+  }
+
+  const userRef = ref(db, 'users/' + user.uid);
+  try {
+    const snapshot = await get(userRef);
+    const currentStars = snapshot.exists() ? (snapshot.val().stars || 0) : 0;
+    
+    await update(userRef, { stars: currentStars + reward });
+    
+    const display = document.getElementById('stars-count');
+    if (display) display.innerText = currentStars + reward;
+    
+    alert(`Задание выполнено! +${reward} ⭐`);
+  } catch (e) {
+    console.error("Ошибка при начислении:", e);
+  }
+};
+
+// Отслеживание состояния
+onAuthStateChanged(auth, (user) => {
+  const display = document.getElementById('stars-count');
+  if (user) {
+    console.log("Сессия активна для:", user.displayName);
+    const userRef = ref(db, 'users/' + user.uid);
+    get(userRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        if (display) display.innerText = snapshot.val().stars || 0;
+      } else {
+        set(userRef, { stars: 0 });
+      }
+    });
+  } else {
+    if (display) display.innerText = "0";
+  }
+});
